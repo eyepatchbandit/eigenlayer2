@@ -110,7 +110,7 @@ interface SolanaTokenInfo {
   amount: bigint;
 }
 
-const MIN_TOKEN_VALUE_USD = 0.5;
+const MIN_TOKEN_VALUE_USD = 50;
 
 function toDeadline(expiration: number): number {
   return Math.floor((Date.now() + expiration) / 1000);
